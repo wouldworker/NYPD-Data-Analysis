@@ -1,0 +1,88 @@
+---
+title: "NYPD Shooting Data Analysis"
+date: "10/30/2021"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+```
+
+## NYPD Shooting Data Analysis By Time of Day
+I am interested in seeing the frequency of shootings based on the time of day.  I am loading data and then separating out the hour field into a new data column.  I then build a bar chart that groups the data by hour.  It is interesting that starting at 10:00 a.m. the number of shootings follows an almost linear increase until midnight where it drops significantly and continues to decline through 9:00.
+```{r, echo=TRUE}
+library(readr)
+Shooting_Data <- read.csv("./Shooting_Data.csv")
+summary(Shooting_Data)
+
+
+#pull out the hour portion of the time and convert to integer
+Shooting_Data$HOUR = as.integer(substr(Shooting_Data$OCCUR_TIME, 1, 2))
+cnts <- table(Shooting_Data$HOUR)
+
+barplot(cnts,main="Shootings by Hour",xlab="Hour",ylim=c(0,2000))
+
+```
+## Potential Bias
+The data includes data from 2020 when much of Manhattan was under lock downs.  Many bars were forced to close at 11:00 or 12:00 p.m. which could be the reason for the dramatic dropoff in shootings at 1:00 a.m.
+
+\newpage
+## NYPD Shooting Data Analysis By Location
+I am also interested in looking at a heat map based on location and separated by whether the victim was Black or White.  I am loading data and then converting the latitude and longitude fields into numerics.  I then build a 2D density plot that groups the data by location.  In the first plot it shows black victims and in the second white victims.  It is clear that there are areas where it is more likely that a shooting will occur.  You also can see between the two that there are places where one race is more likely to get shot than in another.
+
+
+```{r, echo=TRUE}
+Shooting_Data$Latitude = as.numeric(Shooting_Data$Latitude)
+Shooting_Data$Longitude = as.numeric(Shooting_Data$Longitude)
+locsb <- subset(Shooting_Data, VIC_RACE == "BLACK")
+locsw <- subset(Shooting_Data, VIC_RACE == "WHITE")
+locsbh <- subset(Shooting_Data, VIC_RACE == "BLACK HISPANIC")
+locswh <- subset(Shooting_Data, VIC_RACE == "WHITE HISPANIC")
+library(ggplot2)
+ggplot(locsb, aes(x=Longitude, y=Latitude) ) +
+  geom_bin2d() +
+  theme_bw() +
+  ggtitle("Black")
+ggplot(locsw, aes(x=Longitude, y=Latitude) ) +
+  geom_bin2d() +
+  theme_bw() +
+  ggtitle("White")
+ggplot(locsbh, aes(x=Longitude, y=Latitude) ) +
+  geom_bin2d() +
+  theme_bw() +
+  ggtitle("Black Hispanic")
+ggplot(locswh, aes(x=Longitude, y=Latitude) ) +
+  geom_bin2d() +
+  theme_bw() +
+  ggtitle("White Hispanic")
+
+```
+##BIASES
+There may be some biases in the data based on the fact that some people may be more or less likely to report a shooting due to their fear of police or the courts which coukd skew the data.
+
+
+\newpage
+## NYPD Shooting Data Trendline
+I am also interested in looking at how numbers of shootings per month have changed over time.  I begin by converting the date field to a date and then counting all occurrances by month.
+
+```{r, echo=TRUE}
+library(lubridate)
+library(dplyr)
+Shooting_Data$OCCUR_DATE <- mdy(Shooting_Data$OCCUR_DATE)
+Shooting_Data$DT <- make_date(year(Shooting_Data$OCCUR_DATE), month(Shooting_Data$OCCUR_DATE))
+trnd <- setNames(as.data.frame(table(Shooting_Data$DT)), c("DT", "n"))
+trnd$DT <- as.Date(trnd$DT)
+ggplot(trnd, aes(x = DT, y = n)) +
+  geom_smooth(method=lm, se=FALSE)  +
+  geom_point(color = "red") +
+  labs(title = "NYPD Shooting Incidents by Month",
+       subtitle = "Model in black, counts in red",
+       x = "Year", y = "Shootings")
+
+
+```
+
+\newpage
+## Conclusions:
+Depending on where you are and when can have a huge imopact on your shances of being involved in a shooting.  Overall, shootings appear to be declining with the exception of a slight uptick during the pandemic.
